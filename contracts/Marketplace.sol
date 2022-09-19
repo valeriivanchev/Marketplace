@@ -44,6 +44,7 @@ contract Marketplace {
        payable(owner).transfer(prices[collectionAddress][tokenId]);
        uint256 change = msg.value - prices[collectionAddress][tokenId];
        payable(msg.sender).transfer(change);
+       delete prices[collectionAddress][tokenId];
        emit NFTBought(tokenId,collectionAddress,msg.sender);
     }
 }
