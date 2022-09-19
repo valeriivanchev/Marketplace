@@ -35,13 +35,13 @@ contract Marketplace {
      emit TokenMinted(tokenId,msg.sender,collectionAddress);
     }
 
-    function listFixedPriceNFT(uint256 price,uint256 tokenId, address collectionAddress)public onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender){
+    function listFixedPriceNFT(uint256 price,uint256 tokenId, address collectionAddress)public onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender) onlyFromWhiteListedCollection(collectionAddress){
         require(NFTCollection(collectionAddress).getApproved(tokenId) == address(this),"Not approved");
         prices[collectionAddress][tokenId] = price;
         emit ListedNFT(tokenId,msg.sender,collectionAddress,"fixed",price);
     }
 
-    function buyFixedPriceNFT(uint256 tokenId, address collectionAddress, address owner)public payable{
+    function buyFixedPriceNFT(uint256 tokenId, address collectionAddress, address owner)public payable onlyFromWhiteListedCollection(collectionAddress){
        NFTCollection nftCollection = NFTCollection(collectionAddress);
        require(msg.value >= prices[collectionAddress][tokenId],"Not enough to buy");
        nftCollection.safeTransferFrom(owner,msg.sender,tokenId);
