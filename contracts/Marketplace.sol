@@ -16,6 +16,11 @@ contract Marketplace {
         _;
     }
 
+    modifier onlyOwnerOfNFT(address collectionAddress,uint256 tokenId,address owner){
+     require(NFTCollection(collectionAddress).ownerOf(tokenId) == owner,"Not the owner");
+        _;
+    }
+
     mapping(address => bool) whiteListedCollections;
     function createCollection(string memory description, string memory collectionName, string memory collectionSymbol) public returns(address){
         NFTCollection nftCollection = new NFTCollection(description,collectionName,collectionSymbol);
@@ -30,7 +35,7 @@ contract Marketplace {
      emit TokenMinted(tokenId,msg.sender,collectionAddress);
     }
 
-    function listFixedPriceNFT(uint256 price,uint256 tokenId, address collectionAddress)public{
+    function listFixedPriceNFT(uint256 price,uint256 tokenId, address collectionAddress)public onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender){
         require(NFTCollection(collectionAddress).getApproved(tokenId) == address(this),"Not approved");
         prices[collectionAddress][tokenId] = price;
         emit ListedNFT(tokenId,msg.sender,collectionAddress,"fixed",price);
@@ -39,7 +44,6 @@ contract Marketplace {
     function buyFixedPriceNFT(uint256 tokenId, address collectionAddress, address owner)public payable{
        NFTCollection nftCollection = NFTCollection(collectionAddress);
        require(msg.value >= prices[collectionAddress][tokenId],"Not enough to buy");
-       require(nftCollection.ownerOf(tokenId) == owner,"Not the owner");
        nftCollection.safeTransferFrom(owner,msg.sender,tokenId);
        payable(owner).transfer(prices[collectionAddress][tokenId]);
        uint256 change = msg.value - prices[collectionAddress][tokenId];
