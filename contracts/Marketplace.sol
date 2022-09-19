@@ -73,8 +73,11 @@ contract Marketplace {
     function makeOffer(uint256 price,uint256 tokenId, address collectionAddress)public onlyFromWhiteListedCollection(collectionAddress){
         require(prices[collectionAddress][tokenId] < price,"The price is low");
         require(typeOfTheListedNFT[msg.sender][tokenId] != 1,"Bid unavailible");
-
+        if(prices[collectionAddress][tokenId] > 0){
+            eth.decreaseAllowance(address(this),prices[collectionAddress][tokenId]);
+        }
         prices[collectionAddress][tokenId] = price;
+        
         eth.approve(address(this),price);
         eth.increaseAllowance(address(this), price);
         bids[collectionAddress][tokenId] = address(msg.sender);
