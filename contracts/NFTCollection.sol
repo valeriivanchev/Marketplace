@@ -4,14 +4,16 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
-
+import "./Marketplace.sol";
 
 contract NFTCollection is ERC721URIStorage {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
     string _description;
-    constructor(string memory description, string memory name, string memory symbol) ERC721(name, symbol) {
+    Marketplace marketplace;
+    constructor(string memory description, string memory name, string memory symbol,address marketplaceAddress) ERC721(name, symbol) {
         _description = description;
+        marketplace = Marketplace(marketplaceAddress);
     }
 
     function mintToken(address user,string memory ipfsHash)
@@ -33,5 +35,13 @@ contract NFTCollection is ERC721URIStorage {
 
         _tokenIds.increment();
         return newItemId;
+    }
+
+    function sellListedNFT(address user,uint256 tokenId)
+        public
+        returns (uint256)
+    {
+       safeTransferFrom(msg.sender,user,tokenId);
+       marketplace.sellNFT(tokenId,msg.sender);
     }
 }
