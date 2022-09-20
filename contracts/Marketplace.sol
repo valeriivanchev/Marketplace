@@ -86,11 +86,7 @@ contract Marketplace {
     }
 
     function cancelNFTListing(uint256 tokenId, address collectionAddress)public  onlyFromWhiteListedCollection(collectionAddress) onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender){
-        NFTCollection nftCollection = NFTCollection(collectionAddress);
-        if(typeOfTheListedNFT[msg.sender][tokenId] == 1){
-            nftCollection.approve(address(0),tokenId);
-        }
-
+       
        delete prices[msg.sender][tokenId];
        delete typeOfTheListedNFT[msg.sender][tokenId];
        delete biders[msg.sender][tokenId];
