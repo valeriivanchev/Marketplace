@@ -36,11 +36,4 @@ contract NFTCollection is ERC721URIStorage {
         _tokenIds.increment();
         return newItemId;
     }
-
-    function sellListedNFT(address user,uint256 tokenId)
-        public
-    {
-       safeTransferFrom(msg.sender,user,tokenId);
-       marketplace.sellNFT(tokenId,msg.sender);
-    }
 }

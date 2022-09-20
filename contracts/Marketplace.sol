@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "./NFTCollection.sol";
 import "./MyToken.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 // TODO: Implement all user stories and one of the feature request
 contract Marketplace {
     event CollectionCreated(string collectionName, address collectionAddress);
@@ -25,7 +25,7 @@ contract Marketplace {
     }
 
     modifier onlyOwnerOfNFT(address collectionAddress,uint256 tokenId,address owner){
-     require(NFTCollection(collectionAddress).ownerOf(tokenId) == owner,"Not the owner");
+     require(ERC721(collectionAddress).ownerOf(tokenId) == owner,"Not the owner");
         _;
     }
 
@@ -46,60 +46,66 @@ contract Marketplace {
      emit TokenMinted(tokenId,msg.sender,collectionAddress);
     }
 
-    function listFixedPriceNFT(uint256 price,uint256 tokenId, address collectionAddress)public onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender) onlyFromWhiteListedCollection(collectionAddress){
-        require(NFTCollection(collectionAddress).getApproved(tokenId) == address(this),"Not approved");
+    function listFixedPriceNFT(uint256 price,uint256 tokenId, address collectionAddress)public onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender){
+        require(ERC721(collectionAddress).getApproved(tokenId) == address(this),"Not approved");
         prices[collectionAddress][tokenId] = price;
         typeOfTheListedNFT[collectionAddress][tokenId] = 1;
         emit ListedNFT(tokenId,msg.sender,collectionAddress,"fixed",price);
     }
 
-    function buyFixedPriceNFT(uint256 tokenId, address collectionAddress, address owner)public payable onlyFromWhiteListedCollection(collectionAddress){
-       NFTCollection nftCollection = NFTCollection(collectionAddress);
+    function buyFixedPriceNFT(uint256 tokenId, address collectionAddress)public payable{
+       ERC721 nftCollection = ERC721(collectionAddress);
        require(msg.value >= prices[collectionAddress][tokenId],"Not enough to buy");
        require(typeOfTheListedNFT[collectionAddress][tokenId] == 1,"Not a fixed sell");
 
+       address owner = nftCollection.ownerOf(tokenId);
        nftCollection.safeTransferFrom(owner,msg.sender,tokenId);
        payable(owner).transfer(prices[collectionAddress][tokenId]);
        
-       uint256 change = msg.value - prices[collectionAddress][tokenId];
-       payable(msg.sender).transfer(change);
-       
+       if(msg.value > prices[collectionAddress][tokenId]){
+        uint256 change = msg.value - prices[collectionAddress][tokenId];
+        payable(msg.sender).transfer(change);
+       }
+
        delete prices[collectionAddress][tokenId];
        delete typeOfTheListedNFT[collectionAddress][tokenId];
        
        emit NFTBought(tokenId,collectionAddress,msg.sender);
     }
 
-    function listBiddingNFT(uint256 price,uint256 tokenId, address collectionAddress)public onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender)onlyFromWhiteListedCollection(collectionAddress){
+    function listBiddingNFT(uint256 price,uint256 tokenId, address collectionAddress)public onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender){
         prices[collectionAddress][tokenId] = price;
         typeOfTheListedNFT[collectionAddress][tokenId] = 2;
         emit ListedNFT(tokenId,msg.sender,collectionAddress,"bidding",price);
     }
 
-    function makeOffer(uint256 price,uint256 tokenId, address collectionAddress)public onlyFromWhiteListedCollection(collectionAddress){
+    function makeOffer(uint256 price,uint256 tokenId, address collectionAddress)public{
         require(prices[collectionAddress][tokenId] < price,"The price is low");
         require(typeOfTheListedNFT[msg.sender][tokenId] != 1,"Bid unavailible");
+        require(eth.balanceOf(address(msg.sender)) >= price,"Insufficient funds");
+        require(eth.allowance(address(msg.sender),address(this)) >= price,"Insufficient allowance");
         prices[collectionAddress][tokenId] = price;
-        eth.approve(address(this),price);
-        eth.increaseAllowance(address(this), price);
         biders[collectionAddress][tokenId] = address(msg.sender);
     }
 
-    function cancelNFTListing(uint256 tokenId, address collectionAddress)public  onlyFromWhiteListedCollection(collectionAddress) onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender){
-       
+    function cancelNFTListing(uint256 tokenId, address collectionAddress)public  onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender){
        delete prices[msg.sender][tokenId];
        delete typeOfTheListedNFT[msg.sender][tokenId];
        delete biders[msg.sender][tokenId];
        emit CancelListing(tokenId, collectionAddress);
     }
 
-    function sellNFT(uint256 tokenId,address owner)public onlyFromWhiteListedCollection(msg.sender){
-       require(typeOfTheListedNFT[msg.sender][tokenId] == 1,"Not for bid sell");
-
-       eth.transferFrom(biders[msg.sender][tokenId],owner,prices[msg.sender][tokenId]);
-       delete prices[msg.sender][tokenId];
-       delete typeOfTheListedNFT[msg.sender][tokenId];
-       delete biders[msg.sender][tokenId];
-       emit NFTBought(tokenId,msg.sender,biders[msg.sender][tokenId]);
+    function sellNFT(uint256 tokenId,address collectionAddress)public{
+       ERC721 nftCollection = ERC721(collectionAddress);
+       require(typeOfTheListedNFT[collectionAddress][tokenId] != 1,"Not for bid sell");
+       require(nftCollection.getApproved(tokenId) == address(this),"Not approved");
+       
+       nftCollection.safeTransferFrom(msg.sender,biders[collectionAddress][tokenId],tokenId);
+       eth.transferFrom(biders[collectionAddress][tokenId],msg.sender,prices[collectionAddress][tokenId]);
+       
+       delete prices[collectionAddress][tokenId];
+       delete typeOfTheListedNFT[collectionAddress][tokenId];
+       delete biders[collectionAddress][tokenId];
+       emit NFTBought(tokenId,msg.sender,biders[collectionAddress][tokenId]);
     }
 }
