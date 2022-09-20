@@ -22,7 +22,7 @@ contract NFTCollection is ERC721URIStorage {
     {
          bytes memory encodedJson = abi.encodePacked("{",
         '"ipfsHash":',
-         ipfsHash,
+         ipfsHash,",",
         '"description": description }"');
        
         string memory tokenURI = string(
