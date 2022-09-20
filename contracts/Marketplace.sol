@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 import "./NFTCollection.sol";
+import "./MyToken.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // TODO: Implement all user stories and one of the feature request
@@ -9,10 +10,11 @@ contract Marketplace {
     event TokenMinted(uint256 _tokenId,address owner,address collectionAddress);
     event ListedNFT(uint256 _tokenId,address owner,address collectionAddress,string listType,uint256 price);
     event NFTBought(uint256 _tokenId,address collectionAddress,address newOwner);
+    event CancelListing(uint256 _tokenId,address collectionAddress);
 
     mapping(address => mapping(uint256 => uint256)) prices;
     mapping(address => mapping(uint256 => uint8)) typeOfTheListedNFT;
-    mapping(address => mapping(uint256 => address)) bids;
+    mapping(address => mapping(uint256 => address)) biders;
     mapping(address => bool) whiteListedCollections;
 
     ERC20 eth;
@@ -51,16 +53,20 @@ contract Marketplace {
         emit ListedNFT(tokenId,msg.sender,collectionAddress,"fixed",price);
     }
 
-    function buyFixedPriceNFT(uint256 tokenId, address collectionAddress, address owner)public payable onlyOwnerOfNFT(collectionAddress,tokenId,owner) onlyFromWhiteListedCollection(collectionAddress){
+    function buyFixedPriceNFT(uint256 tokenId, address collectionAddress, address owner)public payable onlyFromWhiteListedCollection(collectionAddress){
        NFTCollection nftCollection = NFTCollection(collectionAddress);
        require(msg.value >= prices[collectionAddress][tokenId],"Not enough to buy");
        require(typeOfTheListedNFT[collectionAddress][tokenId] == 1,"Not a fixed sell");
+
        nftCollection.safeTransferFrom(owner,msg.sender,tokenId);
        payable(owner).transfer(prices[collectionAddress][tokenId]);
+       
        uint256 change = msg.value - prices[collectionAddress][tokenId];
        payable(msg.sender).transfer(change);
+       
        delete prices[collectionAddress][tokenId];
        delete typeOfTheListedNFT[collectionAddress][tokenId];
+       
        emit NFTBought(tokenId,collectionAddress,msg.sender);
     }
 
@@ -76,15 +82,28 @@ contract Marketplace {
         prices[collectionAddress][tokenId] = price;
         eth.approve(address(this),price);
         eth.increaseAllowance(address(this), price);
-        bids[collectionAddress][tokenId] = address(msg.sender);
+        biders[collectionAddress][tokenId] = address(msg.sender);
+    }
+
+    function cancelNFTListing(uint256 tokenId, address collectionAddress)public  onlyFromWhiteListedCollection(collectionAddress) onlyOwnerOfNFT(collectionAddress,tokenId,msg.sender){
+        NFTCollection nftCollection = NFTCollection(collectionAddress);
+        if(typeOfTheListedNFT[msg.sender][tokenId] == 1){
+            nftCollection.approve(address(0),tokenId);
+        }
+
+       delete prices[msg.sender][tokenId];
+       delete typeOfTheListedNFT[msg.sender][tokenId];
+       delete biders[msg.sender][tokenId];
+       emit CancelListing(tokenId, collectionAddress);
     }
 
     function sellNFT(uint256 tokenId,address owner)public onlyFromWhiteListedCollection(msg.sender){
        require(typeOfTheListedNFT[msg.sender][tokenId] == 1,"Not for bid sell");
 
-       eth.transferFrom(bids[msg.sender][tokenId],owner,prices[msg.sender][tokenId]);
+       eth.transferFrom(biders[msg.sender][tokenId],owner,prices[msg.sender][tokenId]);
        delete prices[msg.sender][tokenId];
        delete typeOfTheListedNFT[msg.sender][tokenId];
-       delete bids[msg.sender][tokenId];
+       delete biders[msg.sender][tokenId];
+       emit NFTBought(tokenId,msg.sender,biders[msg.sender][tokenId]);
     }
 }
