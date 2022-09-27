@@ -17,7 +17,7 @@ contract Marketplace {
     mapping(address => mapping(uint256 => address)) biders;
     mapping(address => bool) whiteListedCollections;
 
-    ERC20 eth;
+    ERC20 token;
 
     modifier onlyFromWhiteListedCollection(address collectionAddress){
         require(whiteListedCollections[collectionAddress] == true,"Cannot mint");
@@ -30,7 +30,7 @@ contract Marketplace {
     }
 
     constructor(address tokenAddress){
-        eth = ERC20(tokenAddress);
+        token = ERC20(tokenAddress);
     }
 
     function createCollection(string memory description, string memory collectionName, string memory collectionSymbol) public returns(address){
@@ -82,8 +82,8 @@ contract Marketplace {
     function makeOffer(uint256 price,uint256 tokenId, address collectionAddress)public{
         require(prices[collectionAddress][tokenId] < price,"The price is low");
         require(typeOfTheListedNFT[msg.sender][tokenId] != 1,"Bid unavailible");
-        require(eth.balanceOf(address(msg.sender)) >= price,"Insufficient funds");
-        require(eth.allowance(address(msg.sender),address(this)) >= price,"Insufficient allowance");
+        require(token.balanceOf(address(msg.sender)) >= price,"Insufficient funds");
+        require(token.allowance(address(msg.sender),address(this)) >= price,"Insufficient allowance");
         prices[collectionAddress][tokenId] = price;
         biders[collectionAddress][tokenId] = address(msg.sender);
     }
@@ -101,7 +101,7 @@ contract Marketplace {
        require(nftCollection.getApproved(tokenId) == address(this),"Not approved");
        
        nftCollection.safeTransferFrom(msg.sender,biders[collectionAddress][tokenId],tokenId);
-       eth.transferFrom(biders[collectionAddress][tokenId],msg.sender,prices[collectionAddress][tokenId]);
+       token.transferFrom(biders[collectionAddress][tokenId],msg.sender,prices[collectionAddress][tokenId]);
        
        delete prices[collectionAddress][tokenId];
        delete typeOfTheListedNFT[collectionAddress][tokenId];
