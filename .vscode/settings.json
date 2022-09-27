@@ -1,0 +1,32 @@
+{
+  "files.associations": {
+    ".eslintrc": "jsonc",
+    ".prettierrc": "jsonc",
+    ".eslintignore": "ignore"
+  },
+  "javascript.validate.enable": false,
+  "javascript.format.enable": true,
+  "typescript.format.enable": true,
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "search.exclude": {
+    ".git": true,
+    ".eslintcache": true,
+    ".erb/dll": true,
+    "release/{build,app/dist}": true,
+    "node_modules": true,
+    "npm-debug.log.*": true,
+    "test/**/__snapshots__": true,
+    "yarn.lock": true,
+    "*.{css,sass,scss}.d.ts": true
+  },
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true,
+    "source.organizeImports": true
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "vscode.typescript-language-features"
+  },
+  "eslint.enable": true,
+  "eslint.run": "onSave",
+}
