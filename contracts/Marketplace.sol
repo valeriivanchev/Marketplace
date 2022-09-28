@@ -158,12 +158,12 @@ contract Marketplace {
     ) public {
         require(prices[collectionAddress][tokenId] < price, "The price is low");
         require(
-            typeOfTheListedNFT[msg.sender][tokenId] != 1,
+            typeOfTheListedNFT[collectionAddress][tokenId] != 1,
             "Bid unavailible"
         );
         require(
             token.balanceOf(address(msg.sender)) >= price,
-            "Insufficient funds"
+            "Not enough tokens"
         );
         require(
             token.allowance(address(msg.sender), address(this)) >= price,
@@ -179,7 +179,7 @@ contract Marketplace {
         onlyOwnerOfNFT(collectionAddress, tokenId, msg.sender)
     {
         delete prices[msg.sender][tokenId];
-        delete typeOfTheListedNFT[msg.sender][tokenId];
+        delete typeOfTheListedNFT[collectionAddress][tokenId];
         delete biders[msg.sender][tokenId];
         emit CancelListing(tokenId, collectionAddress);
     }
