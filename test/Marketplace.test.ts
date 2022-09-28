@@ -4,7 +4,7 @@ import { BigNumber, constants } from "ethers";
 import { formatEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
-describe("Game contract", function () {
+describe("Marketplace contract", function () {
   let merketplaceFactory;
   let marketplace: any;
   let accounts: SignerWithAddress[];
