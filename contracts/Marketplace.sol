@@ -122,18 +122,11 @@ contract Marketplace {
 
         address owner = nftCollection.ownerOf(tokenId);
         nftCollection.safeTransferFrom(owner, msg.sender, tokenId);
-        (bool transferToOwner, ) = owner.call{
-            value: prices[collectionAddress][tokenId]
-        }("");
-
-        require(transferToOwner, "Couldn't transfer to owner");
+        payable(owner).transfer(prices[collectionAddress][tokenId]);
 
         if (msg.value > prices[collectionAddress][tokenId]) {
             uint256 change = msg.value - prices[collectionAddress][tokenId];
-            (bool transferToBuyer, ) = address(msg.sender).call{value: change}(
-                ""
-            );
-            require(transferToBuyer, "Couldn't transfer to buyer");
+            payable(msg.sender).transfer(change);
         }
 
         delete prices[collectionAddress][tokenId];
@@ -186,7 +179,7 @@ contract Marketplace {
         onlyOwnerOfNFT(collectionAddress, tokenId, msg.sender)
     {
         delete prices[msg.sender][tokenId];
-        delete typeOfTheListedNFT[collectionAddress][tokenId];
+        delete typeOfTheListedNFT[coll][tokenId];
         delete biders[msg.sender][tokenId];
         emit CancelListing(tokenId, collectionAddress);
     }
