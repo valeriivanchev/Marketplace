@@ -10,6 +10,7 @@ describe("Marketplace contract", function () {
   let accounts: SignerWithAddress[];
   let nftCollectionAddress: string;
   let token: any;
+  let nftContract: any;
   const collectionCreatedInterface = new ethers.utils.Interface([
     "event CollectionCreated(string collectionName, address collectionAddress)",
   ]);
@@ -52,27 +53,24 @@ describe("Marketplace contract", function () {
     );
 
     nftCollectionAddress = event[1];
+    nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
     expect(nftCollectionAddress).to.be.a("string");
   });
 
   it("Mint token from eligible collection address", async () => {
     await marketplace.mintToken(nftCollectionAddress, "test");
-    let nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
     let ownerAddress = await nftContract.ownerOf(0);
     await expect(ownerAddress).to.equal(accounts[0].address);
 
     await marketplace.mintToken(nftCollectionAddress, "test");
-    nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
     ownerAddress = await nftContract.ownerOf(1);
     await expect(ownerAddress).to.equal(accounts[0].address);
 
     await marketplace.mintToken(nftCollectionAddress, "test");
-    nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
     ownerAddress = await nftContract.ownerOf(2);
     await expect(ownerAddress).to.equal(accounts[0].address);
 
     await marketplace.mintToken(nftCollectionAddress, "test");
-    nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
     ownerAddress = await nftContract.ownerOf(3);
     await expect(ownerAddress).to.equal(accounts[0].address);
   });
@@ -83,7 +81,6 @@ describe("Marketplace contract", function () {
   });
 
   it("List fixed priced NFT", async () => {
-    const nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
     await nftContract.approve(marketplace.address, 0);
     const priceTnx = await marketplace.listFixedPriceNFT(BigNumber.from(1), 0, nftCollectionAddress);
     const receipt = await ethers.provider.getTransactionReceipt(priceTnx.hash);
@@ -129,14 +126,12 @@ describe("Marketplace contract", function () {
 
   it("Buy fixed priced NFT", async () => {
     await marketplace.connect(accounts[1]).buyFixedPriceNFT(0, nftCollectionAddress, { value: BigNumber.from(1) });
-    const nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
     const ownerAddress = await nftContract.ownerOf(0);
-
     expect(ownerAddress).to.equal(accounts[1].address);
   });
 
   it("Buy fixed priced NFT with change ", async () => {
-    const nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
+
 
     await nftContract.approve(marketplace.address, 2);
 
@@ -221,7 +216,6 @@ describe("Marketplace contract", function () {
   });
 
   it("Sell NFT", async () => {
-    const nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
     await nftContract.approve(marketplace.address, 1);
     const sellTnx = await marketplace.sellNFT(1, nftCollectionAddress);
     const receipt = await ethers.provider.getTransactionReceipt(sellTnx.hash);
@@ -241,8 +235,6 @@ describe("Marketplace contract", function () {
   });
 
   it("Cancel NFT listing", async () => {
-    const nftContract = await ethers.getContractAt("NFTCollection", nftCollectionAddress);
-
     await nftContract.approve(marketplace.address, 3);
     await marketplace.listFixedPriceNFT(BigNumber.from(1), 3, nftCollectionAddress);
 
