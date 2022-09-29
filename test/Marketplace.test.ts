@@ -58,21 +58,11 @@ describe("Marketplace contract", function () {
   });
 
   it("Mint token from eligible collection address", async () => {
-    await marketplace.mintToken(nftCollectionAddress, "test");
-    let ownerAddress = await nftContract.ownerOf(0);
-    await expect(ownerAddress).to.equal(accounts[0].address);
-
-    await marketplace.mintToken(nftCollectionAddress, "test");
-    ownerAddress = await nftContract.ownerOf(1);
-    await expect(ownerAddress).to.equal(accounts[0].address);
-
-    await marketplace.mintToken(nftCollectionAddress, "test");
-    ownerAddress = await nftContract.ownerOf(2);
-    await expect(ownerAddress).to.equal(accounts[0].address);
-
-    await marketplace.mintToken(nftCollectionAddress, "test");
-    ownerAddress = await nftContract.ownerOf(3);
-    await expect(ownerAddress).to.equal(accounts[0].address);
+    for (let i = 0; i < 5; i++) {
+      await marketplace.mintToken(nftCollectionAddress, "test");
+      let ownerAddress = await nftContract.ownerOf(i);
+      await expect(ownerAddress).to.equal(accounts[0].address);
+    }
   });
 
   it("Mint token from not eligible collection address", async () => {
@@ -131,22 +121,18 @@ describe("Marketplace contract", function () {
   });
 
   it("Buy fixed priced NFT with change ", async () => {
-
-
     await nftContract.approve(marketplace.address, 2);
 
-    const sellerOldBalance = formatEther(await accounts[0].getBalance());
     const buyerOldBalance = formatEther(await accounts[3].getBalance());
     await marketplace.listFixedPriceNFT(BigNumber.from("10000000000000000000"), 2, nftCollectionAddress);
-    await marketplace.connect(accounts[3]).buyFixedPriceNFT(2, nftCollectionAddress, { value: BigNumber.from("20000000000000000000") });
 
+    const buyTnx = await marketplace.connect(accounts[3]).buyFixedPriceNFT(2, nftCollectionAddress, { value: BigNumber.from("20000000000000000000") });
+    const receipt = await ethers.provider.getTransactionReceipt(buyTnx.hash);
     const ownerAddress = await nftContract.ownerOf(0);
-    const sellerNewBalance = formatEther(await accounts[0].getBalance());
-    const buyerNewBalance = formatEther(await accounts[3].getBalance());
+    const buyerNewBalance = formatEther(buyTnx.gasPrice.mul(receipt.gasUsed).add(await accounts[3].getBalance()));
 
     expect(ownerAddress).to.equal(accounts[1].address);
-    expect(Math.round(+sellerNewBalance - +sellerOldBalance)).to.equal(10);
-    expect(Math.round(+buyerOldBalance - +buyerNewBalance)).to.equal(10);
+    expect(+buyerOldBalance - +buyerNewBalance).to.equal(10);
   });
 
   it("List bidding NFT", async () => {
@@ -251,5 +237,27 @@ describe("Marketplace contract", function () {
     const collectionAddress = event[1];
     expect(tokenId).to.equal(3);
     expect(collectionAddress).to.equal(nftCollectionAddress);
+  });
+
+  it("Should make offer without listing the NFT", async () => {
+    await token.connect(accounts[1]).increaseAllowance(marketplace.address, BigNumber.from(2));
+    await marketplace.connect(accounts[1]).makeOffer(BigNumber.from(2), 4, nftCollectionAddress);
+
+    await nftContract.approve(marketplace.address, 4);
+    const sellTnx = await marketplace.sellNFT(4, nftCollectionAddress);
+    const receipt = await ethers.provider.getTransactionReceipt(sellTnx.hash);
+
+    const data = receipt.logs[4].data;
+    const topics = receipt.logs[4].topics;
+    const event = sellNftInterface.decodeEventLog(
+      "NFTBought",
+      data,
+      topics
+    );
+
+    const tokenId = event[0];
+    const owner = event[2];
+    expect(tokenId).to.equal(4);
+    expect(owner).to.equal(accounts[1].address);
   });
 });
