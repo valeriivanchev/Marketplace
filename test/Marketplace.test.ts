@@ -3,7 +3,6 @@ import { expect } from "chai";
 import { BigNumber, constants } from "ethers";
 import { formatEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
-
 describe("Marketplace contract", function () {
   let merketplaceFactory;
   let marketplace: any;
@@ -11,6 +10,7 @@ describe("Marketplace contract", function () {
   let nftCollectionAddress: string;
   let token: any;
   let nftContract: any;
+  let mockMarketplace: any;
   const collectionCreatedInterface = new ethers.utils.Interface([
     "event CollectionCreated(string collectionName, address collectionAddress)",
   ]);
@@ -33,12 +33,18 @@ describe("Marketplace contract", function () {
     const tokenFactory = await ethers.getContractFactory(
       "MyToken"
     );
+    const marketplaceMockFactory = await ethers.getContractFactory(
+      "MarketplaceTestHelper"
+    );
     token = await tokenFactory.deploy("MyToken", "Token");
     await token.deployed();
     await token.connect(accounts[1]).mint();
     await token.connect(accounts[2]).mintWithNumberOfTokens(BigNumber.from("1"));
     marketplace = await merketplaceFactory.deploy(token.address);
     await marketplace.deployed();
+
+    mockMarketplace = await marketplaceMockFactory.deploy(marketplace.address);
+    await mockMarketplace.deployed();
   });
 
   it("Should create collection", async () => {
@@ -58,7 +64,7 @@ describe("Marketplace contract", function () {
   });
 
   it("Should mint token from eligible collection address", async () => {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 7; i++) {
       await marketplace.mintToken(nftCollectionAddress, "test");
       let ownerAddress = await nftContract.ownerOf(i);
       await expect(ownerAddress).to.equal(accounts[0].address);
@@ -157,7 +163,7 @@ describe("Marketplace contract", function () {
   });
 
   it("Should not buy bidding NFT", async () => {
-    await await expect(marketplace.connect(accounts[1]).buyFixedPriceNFT(1, nftCollectionAddress, { value: BigNumber.from(1) }))
+    await expect(marketplace.connect(accounts[1]).buyFixedPriceNFT(1, nftCollectionAddress, { value: BigNumber.from(1) }))
       .to.be.revertedWith("Not a fixed sell");
   });
 
@@ -259,5 +265,21 @@ describe("Marketplace contract", function () {
     const owner = event[2];
     expect(tokenId).to.equal(4);
     expect(owner).to.equal(accounts[1].address);
+  });
+
+  it("Should not transfer to owner", async () => {
+    await nftContract.approve(marketplace.address, 5);
+    await marketplace.listFixedPriceNFT(BigNumber.from("10000000000000000000"), 5, nftCollectionAddress);
+    await nftContract["safeTransferFrom(address,address,uint256)"](accounts[0].address, mockMarketplace.address, 5);
+
+    await expect(mockMarketplace.connect(accounts[1]).buyFixedPriceNFT(5, nftCollectionAddress, { value: BigNumber.from("20000000000000000000") }))
+      .to.be.revertedWith("Couldn't transfer to owner");
+  });
+
+  it("Should not transfer change", async () => {
+    await nftContract.approve(marketplace.address, 6);
+    await marketplace.listFixedPriceNFT(BigNumber.from("10000000000000000000"), 6, nftCollectionAddress);
+    await expect(mockMarketplace.connect(accounts[1]).buyFixedPriceNFT(6, nftCollectionAddress, { value: BigNumber.from("20000000000000000000") }))
+      .to.be.revertedWith("Couldn't transfer to buyer");
   });
 });
