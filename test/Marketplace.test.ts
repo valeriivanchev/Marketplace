@@ -41,7 +41,7 @@ describe("Marketplace contract", function () {
     await marketplace.deployed();
   });
 
-  it("Create collection", async () => {
+  it("Should create collection", async () => {
     const collectionTnx = await marketplace.createCollection("none", "Test", "TST");
     const receipt = await ethers.provider.getTransactionReceipt(collectionTnx.hash);
     const data = receipt.logs[0].data;
@@ -57,7 +57,7 @@ describe("Marketplace contract", function () {
     expect(nftCollectionAddress).to.be.a("string");
   });
 
-  it("Mint token from eligible collection address", async () => {
+  it("Should mint token from eligible collection address", async () => {
     for (let i = 0; i < 5; i++) {
       await marketplace.mintToken(nftCollectionAddress, "test");
       let ownerAddress = await nftContract.ownerOf(i);
@@ -65,12 +65,12 @@ describe("Marketplace contract", function () {
     }
   });
 
-  it("Mint token from not eligible collection address", async () => {
+  it("Should not mint token from not eligible collection address", async () => {
     await expect(marketplace.mintToken(constants.AddressZero, "test"))
       .to.be.revertedWith("Cannot mint");
   });
 
-  it("List fixed priced NFT", async () => {
+  it("Should list fixed priced NFT", async () => {
     await nftContract.approve(marketplace.address, 0);
     const priceTnx = await marketplace.listFixedPriceNFT(BigNumber.from(1), 0, nftCollectionAddress);
     const receipt = await ethers.provider.getTransactionReceipt(priceTnx.hash);
@@ -92,35 +92,35 @@ describe("Marketplace contract", function () {
     expect(price).to.equal(BigNumber.from(1));
   });
 
-  it("Make offer on fixed priced NFT", async () => {
+  it("Should not make offer on fixed priced NFT", async () => {
     await expect(marketplace.connect(accounts[1]).makeOffer(BigNumber.from(2), 0, nftCollectionAddress))
       .to.be.revertedWith("Bid unavailible");
   });
 
-  it("Sell fixed priced NFT", async () => {
+  it("Should not sell fixed priced NFT", async () => {
     await expect(marketplace.sellNFT(0, nftCollectionAddress))
       .to.be.revertedWith("Not for bid sell");
   });
 
-  it("List not approved and not owner fixed priced NFT", async () => {
+  it("Should not list not approved and not owner fixed priced NFT", async () => {
     await expect(marketplace.listFixedPriceNFT(BigNumber.from(1), 1, nftCollectionAddress))
       .to.be.revertedWith("Not approved");
     await expect(marketplace.connect(accounts[1]).listFixedPriceNFT(BigNumber.from(1), 1, nftCollectionAddress))
       .to.be.revertedWith("Not the owner");
   });
 
-  it("Buy without price fixed priced NFT", async () => {
+  it("Should not buy without price fixed priced NFT", async () => {
     await expect(marketplace.connect(accounts[1]).buyFixedPriceNFT(0, nftCollectionAddress, { value: BigNumber.from(0) }))
       .to.be.revertedWith("Not enough to buy");
   });
 
-  it("Buy fixed priced NFT", async () => {
+  it("Should buy fixed priced NFT", async () => {
     await marketplace.connect(accounts[1]).buyFixedPriceNFT(0, nftCollectionAddress, { value: BigNumber.from(1) });
     const ownerAddress = await nftContract.ownerOf(0);
     expect(ownerAddress).to.equal(accounts[1].address);
   });
 
-  it("Buy fixed priced NFT with change ", async () => {
+  it("Should buy fixed priced NFT with change ", async () => {
     await nftContract.approve(marketplace.address, 2);
 
     const buyerOldBalance = formatEther(await accounts[3].getBalance());
@@ -135,7 +135,7 @@ describe("Marketplace contract", function () {
     expect(+buyerOldBalance - +buyerNewBalance).to.equal(10);
   });
 
-  it("List bidding NFT", async () => {
+  it("Should list bidding NFT", async () => {
     const priceTnx = await marketplace.listBiddingNFT(BigNumber.from(1), 1, nftCollectionAddress);
     const receipt = await ethers.provider.getTransactionReceipt(priceTnx.hash);
     const data = receipt.logs[0].data;
@@ -156,27 +156,27 @@ describe("Marketplace contract", function () {
     expect(price).to.equal(BigNumber.from(1));
   });
 
-  it("Try buying bidding NFT", async () => {
+  it("Should not buy bidding NFT", async () => {
     await await expect(marketplace.connect(accounts[1]).buyFixedPriceNFT(1, nftCollectionAddress, { value: BigNumber.from(1) }))
       .to.be.revertedWith("Not a fixed sell");
   });
 
-  it("Make offer with less price", async () => {
+  it("Should not make offer with less price", async () => {
     await expect(marketplace.connect(accounts[1]).makeOffer(BigNumber.from(0), 1, nftCollectionAddress))
       .to.be.revertedWith("The price is low");
   });
 
-  it("Make offer with insufficient funds", async () => {
+  it("Should not make offer with insufficient funds", async () => {
     await expect(marketplace.connect(accounts[2]).makeOffer(BigNumber.from("1000000000000000001"), 1, nftCollectionAddress))
       .to.be.revertedWith("Not enough tokens");
   });
 
-  it("Make with insufficient allowance offer", async () => {
+  it("Should not make with insufficient allowance offer", async () => {
     await expect(marketplace.connect(accounts[1]).makeOffer(BigNumber.from(2), 1, nftCollectionAddress))
       .to.be.revertedWith("Insufficient allowance");
   });
 
-  it("Make offer", async () => {
+  it("Should make offer", async () => {
     await token.connect(accounts[1]).increaseAllowance(marketplace.address, BigNumber.from(2));
     const priceTnx = await marketplace.connect(accounts[1]).makeOffer(BigNumber.from(2), 1, nftCollectionAddress);
     const receipt = await ethers.provider.getTransactionReceipt(priceTnx.hash);
@@ -196,12 +196,12 @@ describe("Marketplace contract", function () {
     expect(buyer).to.equal(accounts[1].address);
   });
 
-  it("Sell NFT without approve", async () => {
+  it("Should not sell NFT without approve", async () => {
     await expect(marketplace.sellNFT(1, nftCollectionAddress))
       .to.be.revertedWith("Not approved");
   });
 
-  it("Sell NFT", async () => {
+  it("Should sell NFT", async () => {
     await nftContract.approve(marketplace.address, 1);
     const sellTnx = await marketplace.sellNFT(1, nftCollectionAddress);
     const receipt = await ethers.provider.getTransactionReceipt(sellTnx.hash);
@@ -220,7 +220,7 @@ describe("Marketplace contract", function () {
     expect(owner).to.equal(accounts[1].address);
   });
 
-  it("Cancel NFT listing", async () => {
+  it("Should cancel NFT listing", async () => {
     await nftContract.approve(marketplace.address, 3);
     await marketplace.listFixedPriceNFT(BigNumber.from(1), 3, nftCollectionAddress);
 
